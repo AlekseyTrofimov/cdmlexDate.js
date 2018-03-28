@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Календарь</title> 
+		<meta http-equiv="Content-type" content="text/html; charset=UTF-8"> 
+		<style type="text/css"> 
+			table { 
+				border-collapse: collapse; 
+				border: 0px #000000; 
+				background: #FFFFFF; 
+			} 
+			td {
+			border: solid 0px black; text-align: right; vertical-align: top; padding: 1px 15px 1px 15px} 
+			
+			select, input {width: 150px; text-align: right} 
+			.btn {width: 100%; text-align: center} 
+			.table1 tr:nth-child(2n) { background: #f0f0f0; } 
+
+			.dtable1 {visibility: hidden; } 
+			.dtable2 {visibility: visible; } 
+			.table2 {float : left; margin-right : 100px;} 
+
+			.calendar {
+				position : absolute;
+				width : 174px;
+				height : 192px;
+				background : #EEEEEE;
+			} 
+
+			.day, .dayBefore, .dayWeek, .dayNow, .calendarpanel, .panelyear {
+				width : 22px;
+				height : 22px;
+				margin : 1px;
+				background : #DCDCDC;
+				float : left;
+				text-align: center;
+			} 
+
+			.day {background : #DCDCDC;} 
+			.dayBefore {background : #F0F0F0;} 
+			.dayWeek {background : #EFEFF2;} 
+			.dayNow {background : #F0FFFF;} 
+
+			.calendarpanel {
+				width : 170px;
+				height : 24px;
+				background : #E2E2E7;
+			} 
+			.panelyear {
+				width : 42px;
+				height : 22px;
+				background : #EFEFF2;
+			} 
+
+		</style>
+		<script language='JavaScript' type='text/javascript'>
+		
+function TcdmlexDate() {
+	var Month = [[31,28,31,30,31,30,31,31,30,31,30,31,31],[31,29,31,30,31,30,31,31,30,31,30,31,31]]; 
+	var MonthDC = [[0],[0]]; 
+	for (var I = 0; I < 12; I++)
+	for (var V = 0; V < 2; V++) 
+		MonthDC[V][I + 1] = Month[V][I] + MonthDC[V][I]; 
+	var weekDayName = ['пн','вт','ср','чт','пт','сб','вс'];
+	
+	this.getNowDate = function() { 
+		var D = new Date(); 
+		var Y = D.getFullYear()-2000; 
+		return (+D.getDate() + MonthDC[+(Y % 4 == 0)][D.getMonth()] + (Y > 0 ? Y*365 + 1 + Math.floor(Y/4) : 0) ); 
+	}
+	
+	function GetDMY(D) { 
+		if (D == 365) 
+		return [30][11][0]; 
+		var Y = Math.floor(D / 365); 
+		if (Y > 0) { 
+			D-= 1 + Math.floor(Y / 4); 
+			Y = Math.floor(D / 365); 
+			D-= Y*365; 
+			if (D == 0) 
+				return [31,11,Y-1]; 
+		} 
+		var VG = +(Y % 4 == 0); 
+		var M; 
+		for (M = 11; (M > 0) && (D <= MonthDC[VG][M]); M--) {} 
+		return [D - MonthDC[VG][M], M, Y]; 
+	} 
+
+	function Date2Str(D) { 
+		var A = GetDMY(D); 
+		A[1]++; 
+		return (A[0] < 10 ? '0' + A[0] : A[0]) + '.' + (A[1] < 10 ? '0' + A[1] : A[1]) + '.' + (2000 + A[2]); 
+	} 
+	
+	this.NextMonth = function(D, NeedDay, C, MonthDelta) { 
+		var dmy = GetDMY(D); 
+
+		var M = dmy[1] + MonthDelta; 
+		if (M < 0) { 
+			dmy[2]--; 
+			M = 11; 
+		} 
+		else 
+		if (M > 11){ 
+			M = 0; 
+			dmy[2]++; 
+		} 
+		var VG = +(dmy[2] % 4 == 0); 
+
+		if (NeedDay > Month[VG][M]) { 
+			NeedDay = Month[VG][M]; 
+		} 
+		return +NeedDay + MonthDC[VG][M] + dmy[2]*365 + (dmy[2] > 0? 1 + Math.floor(dmy[2] / 4) : 0); 
+	}
+	
+
+	function Str2Date(S, Z) { 
+	var Y = +S.split(Z)[2]; 
+	if (Y >= 2000) 
+	Y-= 2000; 
+	var VG = +(Y % 4 == 0); 
+	Y = (Y > 0)? (1 + Math.floor(Y / 4) + Y*365) : 0; 
+	return +S.split(Z)[0] + MonthDC[VG][+S.split(Z)[1] - 1] + Y; 
+	} 
+
+	this.WeekDay = function(D) { 
+	var W = (D + 5 - (Math.floor(D / 365) % 4 == 0) ) % 7; 
+	if (W == 0) 
+	W = 7; 
+	return W; 
+	} 
+
+	this.WorkDayOnly = function(D, C) { 
+		var W = this.WeekDay(D); 
+
+		if (W == 6) { 
+			D+=2; 
+		} 
+		else 
+		if (W == 7) { 
+		D++; 
+		} 
+		return D; 
+	}
+	
+	//---------------------------------------------------------------------
+	
+	var CalendarShow = false; 
+	
+	this.ShowCalendar = function(DateEditName, CalendarPosName) { 
+		var DateEdit = document.getElementById(DateEditName); 
+		var CalendarPos = document.getElementById(CalendarPosName); 
+		if (!CalendarShow) { 
+			var D = Str2Date(DateEdit.value, '.'); 
+			this.Calendar((D != '')? D : getNowDate(), DateEdit, CalendarPos); 
+		} 
+		else 
+			HideCalendar(CalendarPos); 
+	} 
+
+	function HideCalendar(CalendarPos) { 
+		while( CalendarPos.hasChildNodes() ) 
+		CalendarPos.removeChild( CalendarPos.childNodes[ 0 ] ); 
+		CalendarShow = false; 
+	} 
+
+	function CreateDivDay(className, S) { 
+		var day = document.createElement('div'); 
+		day.className = className; 
+		day.appendChild( document.createTextNode( S )); 
+		return day; 
+	} 
+
+	this.Calendar = function(D, DateEdit, CalendarPos) { 
+		var Parent = this;
+		HideCalendar(CalendarPos); 
+		CalendarShow = true; 
+		if (D < 1) 
+			D = 1; 
+		var form = document.createElement('div'); 
+		form.className = 'calendar'; 
+
+		var dmy = GetDMY(D); 
+		var VG = +(dmy[2] % 4 == 0); 
+		var fmd = 1 + MonthDC[VG][dmy[1]] + dmy[2]*365 + Math.floor(dmy[2] / 4); 
+		var dBef = this.WeekDay(fmd); 
+		if (dBef > 0) dBef -= 1; 
+		var dNow = dBef + dmy[0]; 
+		var dAft = dBef + Month[VG][dmy[1]]; 
+		var fcd = fmd - dBef; 
+
+		for (var ix = 0; ix < 7; ix++) 
+		form.appendChild( CreateDivDay('dayWeek', weekDayName[ix]) ); 
+
+		for (var iy = 0; iy < 6; iy++) 
+		for (var ix = 0; ix < 7; ix++) { 
+			var c = ix + iy*7; 
+			var cln = (c == dNow)? 'dayNow' : ((c > dBef) && (c <= dAft))? 'day' : 'dayBefore'; 
+			var day = CreateDivDay(cln, GetDMY( fcd + c )[0]); 
+			day.date = fcd + c; 
+			day.onclick = function() { 
+				DateEdit.value = Date2Str(this.date); 
+				HideCalendar(CalendarPos); 
+			} 
+			form.appendChild( day ); 
+		} 
+
+		var panel = document.createElement('div'); 
+		panel.className = 'calendarpanel'; 
+
+		var pel = CreateDivDay('day', '<' ); 
+		pel.onclick = function() {
+			Parent.Calendar( Parent.NextMonth(D, dmy[0], -1, -1), DateEdit, CalendarPos)
+		} 
+		panel.appendChild( pel ); 
+
+		panel.appendChild( CreateDivDay('dayBefore', dmy[1] + 1 ) ); 
+
+		pel = CreateDivDay('day', '>' ); 
+		pel.onclick = function() {
+			Parent.Calendar( Parent.NextMonth(D, dmy[0], -1, +1), DateEdit, CalendarPos)
+		} 
+		panel.appendChild( pel ); 
+
+		pel = CreateDivDay('day', '<' ); 
+		pel.onclick = function() {
+			Parent.Calendar( D - 365 - VG, DateEdit, CalendarPos)
+		} 
+		panel.appendChild( pel ); 
+
+		panel.appendChild( CreateDivDay('panelyear', dmy[2] + 2000 ) ); 
+
+		pel = CreateDivDay('day', '>' ); 
+		pel.onclick = function() {
+			Parent.Calendar( D + 365 + 0, DateEdit, CalendarPos)
+		} 
+		panel.appendChild( pel ); 
+
+	//	panel.appendChild( pel ); 
+		form.appendChild( panel); 
+		CalendarPos.appendChild( form ); 
+	} 
+}
+cdmlexDate = new TcdmlexDate();
+
+
+		</script>
+	</head>
+	<body>
+		<input type='text' id='D' value='28.03.2018' onclick='javascript:cdmlexDate.ShowCalendar("D", "calendarpos")'> 
+		<i id="calendarpos"></i> 		
+	</body>
+</html>
